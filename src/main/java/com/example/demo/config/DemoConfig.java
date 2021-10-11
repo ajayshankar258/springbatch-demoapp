@@ -2,12 +2,14 @@ package com.example.demo.config;
 
 import com.example.demo.model.Student;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
@@ -35,16 +37,25 @@ public class DemoConfig {
     private static final int CHUNK_SIZE = 5;
 
     @Bean
-    public Job demoJob(final Step demoStep){
+    public Job demoJob(final Step downloadFileStep, final Step processFileStep, final JobExecutionListener demoJobExecutionListener){
 
         return jobBuilderFactory.get("demoJob")
                 .incrementer(new RunIdIncrementer())
-                .start(demoStep)
+                .listener(demoJobExecutionListener)
+                .start(downloadFileStep)
+                .next(processFileStep)
                 .build();
     }
 
     @Bean
-    public Step demoStep(ItemReader<Student> demoReader
+    protected Step downloadFileStep(final Tasklet fileDownloadTasklet) {
+        return this.stepBuilderFactory.get("downloadFileStep")
+                .tasklet(fileDownloadTasklet)
+                .build();
+    }
+
+    @Bean
+    public Step processFileStep(ItemReader<Student> demoReader
                        , ItemProcessor<Student, Student> demoProcessor
                        , ItemWriter<Student> demoWriter) {
 
